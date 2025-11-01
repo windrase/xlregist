@@ -44,20 +44,24 @@ def bearer():
     except:
         return "Ln9YN5trk3UUGHnHXoV8644+QEDWRf8qpLJ0tovzrhQVRjJKzRulyHxNIa8eos0pH7iNIePuPNOxNmY4sRnHZIPEPD7iKAX2Z8Z2qOucrAQ+h6Z98l7GQEoIrDwRTXAD7nLAyRnH9dVwzmidCPSH9dwWBE31I739FGTNKJdqB44Ieq3PIs1y1ay6eZgmNBY84QrE22qRYOzUFWX/68cCNwFoJJdf0BdZeKclWxJAasfLAHR1bnM5V8VkNiC+CZlWe08UiEGaltTDcp2hoLGsaYshcy48PIefK3WseHwQn1SvSERWWNbHO0F70RLz7V0CXOg222YN7LQdwhm2Nv1tiw=="
 
-# Main Logic
 token = bearer()
 
 while True:
     number = input("📱 Masukkan nomor +62: ")
 
-    # Request OTP
     response_otp_request = requests.post(
         'https://jupiter-ms-webprereg.xlaxiata.id/request-otp',
         headers=headers(token),
         json={"msisdn": number}
     )
 
-    print("📩 OTP request status:", response_otp_request.status_code)
+    try:
+        resp_json = response_otp_request.json()
+    except json.JSONDecodeError:
+        resp_json = {}
+
+    print(f"📩 OTP request status: {response_otp_request.status_code}")
+    print("📥 Response:", resp_json)
 
     with open('nik.txt', 'r') as file:
         for line in file:
@@ -84,17 +88,17 @@ while True:
                     print(f"✅ {number} BERHASIL REGISTRASI (NIK: {NIK})")
                     break
 
-                elif any(k in text_result for k in ["sudah terdaftar", "already registered", "terregistrasi"]):
+                elif any(k in text_result for k in ["sudah terdaftar", "already registered", "nomer anda sudah diaktifkan sebelumnya"]):
                     print(f"⚠️ {number} SUDAH TERDAFTAR — KEMBALI KE MENU MASUKAN NOMOR")
-                    break  # keluar while → kembali ke input nomor
+                    break
 
                 elif any(k in text_result for k in ["otp salah", "invalid otp", "otpcode invalid"]):
                     print("❌ OTP SALAH — silakan coba lagi")
-                    continue  # tetap di while untuk OTP baru
+                    continue
 
                 elif any(k in text_result for k in ["nik", "kk", "tidak valid", "not valid"]):
                     print(f"❌ NIK/KK TIDAK VALID — {NIK} | {KK}")
-                    break  # lanjut NIK/KK berikutnya
+                    break
 
                 else:
                     print(f"❌ GAGAL REGISTRASI — {result.get('message', 'Unknown error')}")
