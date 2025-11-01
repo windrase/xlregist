@@ -1,4 +1,5 @@
 import requests, re, json
+import time
 
 def headers(bear):
     return {
@@ -44,57 +45,59 @@ def bearer():
     except:
         return "Ln9YN5trk3UUGHnHXoV8644+QEDWRf8qpLJ0tovzrhQVRjJKzRulyHxNIa8eos0pH7iNIePuPNOxNmY4sRnHZIPEPD7iKAX2Z8Z2qOucrAQ+h6Z98l7GQEoIrDwRTXAD7nLAyRnH9dVwzmidCPSH9dwWBE31I739FGTNKJdqB44Ieq3PIs1y1ay6eZgmNBY84QrE22qRYOzUFWX/68cCNwFoJJdf0BdZeKclWxJAasfLAHR1bnM5V8VkNiC+CZlWe08UiEGaltTDcp2hoLGsaYshcy48PIefK3WseHwQn1SvSERWWNbHO0F70RLz7V0CXOg222YN7LQdwhm2Nv1tiw=="
 
-# === Main Logic ===
+# Main Logic
 token = bearer()
-number = input("📱 INPUT NUMBER: ")
+number = input("📱 INPUT NUMBER +62: ")
+
+# Minta OTP sekali saja
+print(f"\n🔹 Requesting OTP for {number} ...")
+response_otp_request = requests.post(
+    'https://jupiter-ms-webprereg.xlaxiata.id/request-otp',
+    headers=headers(token),
+    json={"msisdn": number}
+)
+print("📩 Response:", response_otp_request.status_code, response_otp_request.text)
+
+OTP = input("➡️ ENTER OTP: ")
 
 with open('nik.txt', 'r') as file:
     for line in file:
         NIK, KK = line.strip().split('|')
 
-        # Minta OTP
-        print(f"\n🔹 Requesting OTP for {number} ...")
-        response_otp_request = requests.post(
-            'https://jupiter-ms-webprereg.xlaxiata.id/request-otp',
-            headers=headers(token),
-            json={"msisdn": number}
-        )
-        print("📩 Response:", response_otp_request.status_code, response_otp_request.text)
+        while True:
+            response_otp_verification = requests.post(
+                'https://jupiter-ms-webprereg.xlaxiata.id/submit-registration-otp-non-biometric',
+                headers=headers(token),
+                json={"msisdn": number, "nik": NIK, "kk": KK, "otpCode": OTP}
+            )
 
-        # Input OTP dari user
-        OTP = input(f"NIK: {NIK} | KK: {KK}\n➡️  ENTER OTP: ")
+            try:
+                result = response_otp_verification.json()
+            except json.JSONDecodeError:
+                print("⚠️ Response tidak valid:", response_otp_verification.text)
+                break
 
-        # Submit OTP untuk registrasi
-        response_otp_verification = requests.post(
-            'https://jupiter-ms-webprereg.xlaxiata.id/submit-registration-otp-non-biometric',
-            headers=headers(token),
-            json={"msisdn": number, "nik": NIK, "kk": KK, "otpCode": OTP}
-        )
+            text_result = str(result).lower()
 
-        # Parsing hasil
-        try:
-            result = response_otp_verification.json()
-        except json.JSONDecodeError:
-            print("⚠️ Response tidak valid:", response_otp_verification.text)
-            continue
+            if 'success' in text_result or result.get('status') == 'SUCCESS':
+                print(f"✅ {number} BERHASIL REGISTRASI (NIK: {NIK})")
+                break
 
-        print("📡 Server Response:", result)
+            elif any(k in text_result for k in ["sudah terdaftar", "already registered", "terregistrasi"]):
+                print(f"⚠️ {number} SUDAH TERDAFTAR — SKIP")
+                break
 
-        text_result = str(result).lower()
-        msg = result.get('message', '').lower()
+            elif any(k in text_result for k in ["otp salah", "invalid otp", "otpcode invalid"]):
+                print("❌ OTP INVALID — silakan kirim ulang OTP")
+                OTP = input("➡️ Masukkan OTP baru: ")
+                continue
 
-        if 'success' in text_result or result.get('status') == 'SUCCESS':
-            print(f"✅ {number} SUCCESSFULLY REGISTERED")
-            break
-        elif any(keyword in text_result for keyword in ["sudah terdaftar", "already registered", "terregistrasi"]):
-            print(f"⚠️ {number} ALREADY REGISTERED — SKIPPING")
-            break
-        elif any(keyword in text_result for keyword in ["otp salah", "invalid otp", "otpcode invalid"]):
-            print(f"❌ OTP INVALID — COBA LAGI")
-            continue
-        elif any(keyword in text_result for keyword in ["nik", "kk", "tidak valid", "not valid"]):
-            print(f"❌ NIK/KK INVALID — {NIK} | {KK}")
-            continue
-        else:
-            print(f"❌ GAGAL REGISTRASI — {result.get('message', 'Unknown error')}")
-            continue
+            elif any(k in text_result for k in ["nik", "kk", "tidak valid", "not valid"]):
+                print(f"❌ NIK/KK TIDAK VALID — {NIK} | {KK}")
+                break
+
+            else:
+                print(f"❌ GAGAL REGISTRASI — {result.get('message', 'Unknown error')}")
+                break
+
+        time.sleep(1)
