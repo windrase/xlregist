@@ -50,7 +50,6 @@ def start():
     while True:
         number = input("📱 Masukkan nomor +62: ")
 
-        # Request OTP
         print(f"🔹 Requesting OTP untuk {number}...")
         otp_resp = requests.post(
             'https://jupiter-ms-webprereg.xlaxiata.id/request-otp',
@@ -81,18 +80,16 @@ def start():
                 text_result = str(result).lower()
                 msg = result.get('message', '').lower()
 
-                # Jika sukses
                 if 'success' in text_result or result.get('status') == 'SUCCESS':
                     print(f"✅ {number} BERHASIL DIREGISTRASI")
                     return
 
-                # Jika sudah terdaftar
-                elif any(k in text_result for k in ["sudah terdaftar", "already registered", "terregistrasi"]):
-                    print(f"⚠️ {number} SUDAH TERDAFTAR — KEMBALI KE MENU MASUKAN NOMOR")
-                    break  # keluar dari loop NIK/KK -> kembali ke awal while
+                elif any(k in text_result for k in ["sudah terdaftar", "already registered", "terregistrasi", "diaktifkan sebelumnya"]):
+                    print(f"⚠️ {number} SUDAH TERDAFTAR — KEMBALI KE MENU INPUT NOMOR\n")
+                    return start()  # langsung kembali ke awal
 
-                elif any(k in text_result for k in ["otp salah", "invalid otp", "otpcode invalid"]):
-                    print(f"❌ OTP INVALID — silakan input ulang.")
+                elif any(k in text_result for k in ["otp salah", "invalid otp", "otpcode invalid", "not found", "expired"]):
+                    print(f"❌ OTP INVALID / EXPIRED — silakan input ulang OTP.")
                     break
 
                 elif any(k in text_result for k in ["nik", "kk", "tidak valid", "not valid"]):
